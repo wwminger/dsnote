@@ -97,29 +97,27 @@ jobs:
     environment: dockerhub
     needs: [build-containers]
     if: ${{ always() && (needs.build-containers.result == 'success' || needs.build-containers.result == 'skipped') }}
-    container:
-      image: ${{ vars.DOCKERHUB_USER }}/dsnote-builder:latest
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Configure git safe directory
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      - name: Prepare and build
+      - name: Build x86_64 package
         run: |
-          cp arch/git/* .
-          sed -i "s/CI_BUILD=false/CI_BUILD=true/" PKGBUILD
-          sed -i "s/FULL_BUILD=true/FULL_BUILD=false/" PKGBUILD
-          # Change ownership to builduser
-          chown -R builduser:builduser .
-          # Build as builduser
-          sudo -u builduser makepkg --syncdeps --noconfirm
-          mkdir -p artifacts
-          mv dsnote-git-*-x86_64.pkg.tar.zst artifacts/ || true
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            ${{ vars.DOCKERHUB_USER }}/dsnote-builder:latest \
+            bash -c "
+              cd /workspace
+              cp arch/git/* .
+              sed -i 's/CI_BUILD=false/CI_BUILD=true/' PKGBUILD
+              sed -i 's/FULL_BUILD=true/FULL_BUILD=false/' PKGBUILD
+              chown -R builduser:builduser .
+              sudo -u builduser makepkg --syncdeps --noconfirm
+              mkdir -p artifacts
+              mv dsnote-git-*-x86_64.pkg.tar.zst artifacts/ || true
+            "
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -135,29 +133,32 @@ jobs:
     environment: dockerhub
     needs: [build-containers]
     if: ${{ always() && (needs.build-containers.result == 'success' || needs.build-containers.result == 'skipped') }}
-    container:
-      image: ${{ vars.DOCKERHUB_USER }}/dsnote-builder:latest
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Configure git safe directory
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
-      - name: Prepare and build
+      - name: Build aarch64 package
         run: |
-          cp arch/git/* .
-          sed -i "s/CI_BUILD=false/CI_BUILD=true/" PKGBUILD
-          sed -i "s/FULL_BUILD=false/FULL_BUILD=true/" PKGBUILD
-          # Change ownership to builduser
-          chown -R builduser:builduser .
-          # Build as builduser
-          sudo -u builduser makepkg --syncdeps --noconfirm
-          mkdir -p artifacts
-          mv dsnote-git-*-aarch64.pkg.tar.zst artifacts/ || true
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            ${{ vars.DOCKERHUB_USER }}/dsnote-builder:latest \
+            bash -c "
+              cd /workspace
+              cp arch/git/* .
+              sed -i 's/CI_BUILD=false/CI_BUILD=true/' PKGBUILD
+              sed -i 's/FULL_BUILD=false/FULL_BUILD=true/' PKGBUILD
+              chown -R builduser:builduser .
+              sudo -u builduser makepkg --syncdeps --noconfirm
+              mkdir -p artifacts
+              mv dsnote-git-*-aarch64.pkg.tar.zst artifacts/ || true
+            "
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
