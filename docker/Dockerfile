@@ -33,10 +33,7 @@ RUN pacman -S --noconfirm --needed \
     ocl-icd \
     openblas \
     python \
-    python-accelerate \
     python-pip \
-    python-torchaudio \
-    python-transformers \
     qt5-base \
     qt5-declarative \
     qt5-multimedia \
