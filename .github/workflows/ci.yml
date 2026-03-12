@@ -11,12 +11,28 @@ on:
       - master
 
 jobs:
+  check-changes:
+    name: Check Changes
+    runs-on: ubuntu-latest
+    outputs:
+      docker-changed: ${{ steps.filter.outputs.docker }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            docker:
+              - 'docker/Dockerfile'
+
   build-containers:
     name: Build Containers
     runs-on: ubuntu-latest
     environment: dockerhub
     permissions:
       contents: read
+    needs: [check-changes]
+    if: ${{ needs.check-changes.outputs.docker-changed == 'true' }}
     outputs:
       containers-built: ${{ steps.build.outputs.success }}
     steps:
@@ -80,6 +96,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: dockerhub
     needs: [build-containers]
+    if: ${{ always() && (needs.build-containers.result == 'success' || needs.build-containers.result == 'skipped') }}
     container:
       image: ${{ vars.DOCKERHUB_USER }}/dsnote-builder:latest
     steps:
@@ -117,14 +134,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: dockerhub
     needs: [build-containers]
+    if: ${{ always() && (needs.build-containers.result == 'success' || needs.build-containers.result == 'skipped') }}
     container:
       image: ${{ vars.DOCKERHUB_USER }}/dsnote-builder:latest
-      options: --platform linux/arm64
     steps:
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -157,7 +171,7 @@ jobs:
     name: Create Release
     needs: [build-x86_64, build-aarch64]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: ${{ always() && needs.build-x86_64.result == 'success' && needs.build-aarch64.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - name: Download x86_64 artifact
         uses: actions/download-artifact@v4
