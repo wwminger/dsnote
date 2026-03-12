@@ -53,6 +53,9 @@ makedepends=(
 makedepends_x86_64=(
 #  'cuda'
 )
+makedepends_aarch64=(
+# Additional aarch64 specific build dependencies if needed
+)
 optdepends=(
   'python-accelerate: Support for Punctuation and Hebrew Diacritics restoration'
   'python-torchaudio: Support for Coqui TTS models'
@@ -68,6 +71,8 @@ optdepends_x86_64=(
   'python-faster-whisper: Support for FasterWhisper TTS models'
   'vulkan-intel: Vulkan support for Intel GPU'
   'vulkan-radeon: Vulkan support for AMD RADV'
+)
+optdepends_aarch64=(
 )
 options=('!debug')
 provides=(${_pkgname})
@@ -115,6 +120,7 @@ build() {
 
   FULL_BUILD=true
 
+  # Architecture-specific configuration
   if [[ "${CARCH}" == "x86_64" ]]; then
     pacman -Qi cuda &> /dev/null && HAS_CUDA=true || HAS_CUDA=false
 
@@ -122,6 +128,7 @@ build() {
       CMAKE+=" -DBUILD_WHISPERCPP_CUBLAS=ON -DCMAKE_CUDA_ARCHITECTURES=native"
       export NVCC_APPEND_FLAGS="-std=c++17 --compress-mode=size --split-compile=0 -Wno-deprecated-gpu-targets"
     fi
+
   fi
 
   CI_BUILD=false

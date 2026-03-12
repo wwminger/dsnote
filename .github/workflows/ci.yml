@@ -1,0 +1,140 @@
+name: CI Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-x86_64:
+    name: Build x86_64
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm git sudo
+
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Setup build user
+        run: |
+          useradd -m builduser
+          echo "builduser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/builduser
+          chmod 0440 /etc/sudoers.d/builduser
+
+      - name: Prepare build
+        run: |
+          cp arch/git/* .
+          sed -i "s/CI_BUILD=false/CI_BUILD=true/" PKGBUILD
+          sed -i "s/FULL_BUILD=true/FULL_BUILD=false/" PKGBUILD
+
+      - name: Build package
+        run: |
+          sudo -u builduser makepkg --syncdeps --noconfirm
+          mkdir -p artifacts
+          mv dsnote-git-*-x86_64.pkg.tar.zst artifacts/ || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dsnote-x86_64
+          path: artifacts/*.pkg.tar.zst
+          retention-days: 7
+
+  build-aarch64:
+    name: Build aarch64
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mkiol/dsnote-aarch64-builder:latest
+      options: --platform linux/arm64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Setup build user
+        run: |
+          useradd -m builduser
+          echo "builduser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/builduser
+          chmod 0440 /etc/sudoers.d/builduser
+
+      - name: Prepare build
+        run: |
+          cp arch/git/* .
+          sed -i "s/CI_BUILD=false/CI_BUILD=true/" PKGBUILD
+          sed -i "s/FULL_BUILD=false/FULL_BUILD=true/" PKGBUILD
+
+      - name: Build package
+        run: |
+          sudo -u builduser makepkg --syncdeps --noconfirm
+          mkdir -p artifacts
+          mv dsnote-git-*-aarch64.pkg.tar.zst artifacts/ || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dsnote-aarch64
+          path: artifacts/*.pkg.tar.zst
+          retention-days: 7
+
+  release:
+    name: Create Release
+    needs: [build-x86_64, build-aarch64]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Download x86_64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dsnote-x86_64
+          path: ./artifacts
+
+      - name: Download aarch64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dsnote-aarch64
+          path: ./artifacts
+
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          sha256sum *.pkg.tar.zst > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*
+          tag_name: build-${{ github.sha }}
+          name: Build ${{ github.sha }}
+          generate_release_notes: true
+          body: |
+            ## Build Information
+            - Commit: ${{ github.sha }}
+            - Build Date: ${{ github.event.head_commit.timestamp }}
+            - Branch: ${{ github.ref_name }}
+
+            ## SHA256 Checksums
+            ```
+            $(cat artifacts/SHA256SUMS.txt)
+            ```
