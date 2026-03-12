@@ -15,16 +15,13 @@ RUN pacman -Syu --noconfirm && \
     pacman -Scc --noconfirm && \
     rm -rf /var/cache/pacman/pkg/*
 
-# Install build dependencies
-RUN pacman -S --noconfirm \
-    boost \
+# Install runtime dependencies (from PKGBUILD depends)
+RUN pacman -S --noconfirm --needed \
     boost-libs \
-    cmake \
-    extra-cmake-modules \
     fmt \
-    git \
     glslang \
     gst-plugins-good \
+    hicolor-icon-theme \
     kconfigwidgets5 \
     kdbusaddons5 \
     kiconthemes5 \
@@ -33,11 +30,8 @@ RUN pacman -S --noconfirm \
     libpulse \
     libxinerama \
     libxtst \
-    meson \
     ocl-icd \
     openblas \
-    patchelf \
-    pybind11 \
     python \
     python-accelerate \
     python-pip \
@@ -47,22 +41,37 @@ RUN pacman -S --noconfirm \
     qt5-declarative \
     qt5-multimedia \
     qt5-quickcontrols2 \
-    qt5-tools \
     qt5-x11extras \
     rubberband \
-    sudo \
     taglib \
+    vulkan-icd-loader \
     wayland \
     xz && \
     pacman -Scc --noconfirm && \
     rm -rf /var/cache/pacman/pkg/*
 
-# Install Python dependencies
-RUN pip3 install --no-cache-dir \
-    accelerate \
-    torchaudio \
-    transformers && \
-    rm -rf /root/.cache/pip
+# Install build dependencies (from PKGBUILD makedepends)
+RUN pacman -S --noconfirm --needed \
+    boost \
+    cmake \
+    extra-cmake-modules \
+    git \
+    meson \
+    patchelf \
+    pybind11 \
+    qt5-tools \
+    vulkan-headers \
+    sudo && \
+    pacman -Scc --noconfirm && \
+    rm -rf /var/cache/pacman/pkg/*
+
+
+# Install optional dependencies (from PKGBUILD optdepends)
+# ydotool: Support for inserting text into active window in Wayland
+RUN pacman -S --noconfirm --needed \
+    ydotool || true && \
+    pacman -Scc --noconfirm && \
+    rm -rf /var/cache/pacman/pkg/*
 
 # Create build user
 RUN useradd -m builduser && \
