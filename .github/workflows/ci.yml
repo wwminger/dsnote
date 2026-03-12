@@ -91,6 +91,9 @@ jobs:
       - name: Configure git safe directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
+      - name: Fix directory permissions
+        run: chmod -R 777 "$GITHUB_WORKSPACE"
+
       - name: Prepare build
         run: |
           cp arch/git/* .
@@ -127,6 +130,9 @@ jobs:
 
       - name: Configure git safe directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Fix directory permissions
+        run: chmod -R 777 "$GITHUB_WORKSPACE"
 
       - name: Prepare build
         run: |
