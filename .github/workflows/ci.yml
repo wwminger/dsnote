@@ -78,6 +78,7 @@ jobs:
   build-x86_64:
     name: Build x86_64
     runs-on: ubuntu-latest
+    environment: dockerhub
     needs: [build-containers]
     container:
       image: ${{ vars.DOCKERHUB_USER }}/dsnote-builder:latest
@@ -119,6 +120,7 @@ jobs:
   build-aarch64:
     name: Build aarch64
     runs-on: ubuntu-latest
+    environment: dockerhub
     needs: [build-containers]
     container:
       image: ${{ vars.DOCKERHUB_USER }}/dsnote-builder:latest
