@@ -116,7 +116,8 @@ jobs:
               chown -R builduser:builduser .
               sudo -u builduser makepkg --syncdeps --noconfirm
               mkdir -p artifacts
-              mv dsnote-git-*-x86_64.pkg.tar.zst artifacts/ || true
+              cp dsnote-git-*.pkg.tar.zst artifacts/
+              ls -la artifacts/
             "
 
       - name: Upload artifact
@@ -157,7 +158,8 @@ jobs:
               chown -R builduser:builduser .
               sudo -u builduser makepkg --syncdeps --noconfirm
               mkdir -p artifacts
-              mv dsnote-git-*-aarch64.pkg.tar.zst artifacts/ || true
+              cp dsnote-git-*.pkg.tar.zst artifacts/
+              ls -la artifacts/
             "
 
       - name: Upload artifact
