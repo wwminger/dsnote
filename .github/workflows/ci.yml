@@ -157,8 +157,10 @@ jobs:
               sed -i 's/FULL_BUILD=false/FULL_BUILD=true/' PKGBUILD
               chown -R builduser:builduser .
               sudo -u builduser makepkg --syncdeps --noconfirm
+              pwd 
+              ls -la /workspace
               mkdir -p artifacts
-              cp dsnote-git-*.pkg.tar.zst artifacts/
+              cp dsnote*.pkg.tar.zst artifacts/
               ls -la artifacts/
             "
 
