@@ -181,17 +181,17 @@ jobs:
               done
               
               # Create startup script
-              cat > dsnote.sh << 'EOF'
+              cat > dsnote.sh << 'ENDSCRIPT'
 #!/bin/bash
-SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-export LD_LIBRARY_PATH="\${SCRIPT_DIR}/lib:\${LD_LIBRARY_PATH}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export LD_LIBRARY_PATH="${SCRIPT_DIR}/lib:${LD_LIBRARY_PATH}"
 export QT_QPA_PLATFORM=xcb
-exec "\${SCRIPT_DIR}/dsnote" "\$@"
-EOF
+exec "${SCRIPT_DIR}/dsnote" "$@"
+ENDSCRIPT
               chmod +x dsnote.sh
-              
+
               # Create README
-              cat > README.txt << 'EOF'
+              cat > README.txt << 'ENDREADME'
 DSNote AArch64 Binary Distribution
 ===================================
 
@@ -206,7 +206,7 @@ Requirements:
 Optional: Install system packages for full functionality:
   sudo apt install libqt5core5a libqt5gui5 libqt5widgets5 \
                    libgstreamer1.0-0 libpulse0 libopenblas0
-EOF
+ENDREADME
               
               ls -laR \${DIST_DIR}
             "
