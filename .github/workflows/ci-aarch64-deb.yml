@@ -1,0 +1,220 @@
+name: CI AArch64 DEB Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'docker/Dockerfile.aarch64-kylin'
+      - '.github/workflows/ci-aarch64-deb.yml'
+      - 'deb/**'
+      - 'CMakeLists.txt'
+      - 'config.h.in'
+      - 'src/**'
+      - 'resources/**'
+      - 'dbus/**'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - 'docker/Dockerfile.aarch64-kylin'
+      - '.github/workflows/ci-aarch64-deb.yml'
+      - 'deb/**'
+      - 'CMakeLists.txt'
+      - 'config.h.in'
+      - 'src/**'
+      - 'resources/**'
+      - 'dbus/**'
+
+jobs:
+  check-changes:
+    name: Check Changes
+    runs-on: ubuntu-latest
+    outputs:
+      docker-changed: ${{ steps.filter.outputs.docker }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            docker:
+              - 'docker/Dockerfile.aarch64-kylin'
+
+  build-container:
+    name: Build AArch64 Container
+    runs-on: ubuntu-latest
+    environment: dockerhub
+    permissions:
+      contents: read
+    needs: [check-changes]
+    if: ${{ needs.check-changes.outputs.docker-changed == 'true' }}
+    outputs:
+      containers-built: ${{ steps.build.outputs.success }}
+    steps:
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
+        with:
+          daemon-config: |
+            {
+              "debug": true,
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
+
+      - name: Debug Vars
+        run: |
+          echo "Variable DOCKERHUB_USER is: ${{ vars.DOCKERHUB_USER }}"
+          if [ -z "${{ vars.DOCKERHUB_USER }}" ]; then
+            echo "::error::Variable DOCKERHUB_USER is empty! Check your repository settings."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate Unique Tag
+        id: meta_tag
+        run: |
+          DATE=$(date +'%Y%m%d')
+          SHA=${{ github.sha }}
+          SHORT_SHA=${SHA:0:7}
+          echo "tag=v${DATE}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build and push aarch64 container
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.aarch64-kylin
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ vars.DOCKERHUB_USER }}/dsnote-aarch64-kylin-builder:${{ steps.meta_tag.outputs.tag }}
+            ${{ vars.DOCKERHUB_USER }}/dsnote-aarch64-kylin-builder:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+ 
+
+  build-aarch64-binary:
+    name: Build AArch64 Binary
+    runs-on: ubuntu-latest
+    environment: dockerhub
+    needs: [build-container]
+    if: ${{ always() && (needs.build-container.result == 'success' || needs.build-container.result == 'skipped') }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build AArch64 binary with static libs
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            ${{ vars.DOCKERHUB_USER }}/dsnote-aarch64-kylin-builder:latest \
+            bash -c "
+              cd /workspace
+              mkdir -p build && cd build
+              cmake .. \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DWITH_DESKTOP=ON \
+                -DWITH_PY=ON \
+                -DBUILD_LIBARCHIVE=OFF \
+                -DBUILD_FMT=OFF \
+                -DBUILD_CATCH2=OFF \
+                -DBUILD_OPENBLAS=OFF \
+                -DBUILD_XZ=OFF \
+                -DBUILD_PYBIND11=OFF \
+                -DBUILD_RUBBERBAND=OFF \
+                -DBUILD_FFMPEG=ON \
+                -DBUILD_TAGLIB=OFF \
+                -DBUILD_VOSK=OFF \
+                -DBUILD_WHISPERCPP_VULKAN=ON \
+                -DBUILD_QQC2_BREEZE_STYLE=ON \
+                -DDOWNLOAD_VOSK=ON \
+                -DCMAKE_INSTALL_PREFIX=/usr \
+                -Wno-dev
+              make -j\$(nproc)
+              
+              # Create distribution directory
+              DIST_DIR=/workspace/artifacts/dsnote-aarch64
+              mkdir -p \${DIST_DIR}
+              
+              # Copy main binary
+              cp dsnote \${DIST_DIR}/
+              
+              # Collect required shared libraries
+              cd \${DIST_DIR}
+              mkdir -p lib
+              
+              # Get library dependencies
+              ldd dsnote | grep '=> /' | awk '{print \$3}' | while read lib; do
+                if [[ \$lib == */libboost* ]] || [[ \$lib == */libfmt* ]] || \
+                   [[ \$lib == */libgstreamer* ]] || [[ \$lib == */libgst* ]] || \
+                   [[ \$lib == */libkf5* ]] || [[ \$lib == */libQt5* ]] || \
+                   [[ \$lib == */librubberband* ]] || [[ \$lib == */libtag* ]] || \
+                   [[ \$lib == */libopenblas* ]] || [[ \$lib == */libarchive* ]] || \
+                   [[ \$lib == */libpulse* ]] || [[ \$lib == */libvulkan* ]] || \
+                   [[ \$lib == */libwayland* ]] || [[ \$lib == */libxz* ]] || \
+                   [[ \$lib == */liblzma* ]] || [[ \$lib == */libfmt* ]]; then
+                  cp -v \$lib lib/ || true
+                fi
+              done
+              
+              # Create startup script
+              cat > dsnote.sh << 'EOF'
+#!/bin/bash
+SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+export LD_LIBRARY_PATH="\${SCRIPT_DIR}/lib:\${LD_LIBRARY_PATH}"
+export QT_QPA_PLATFORM=xcb
+exec "\${SCRIPT_DIR}/dsnote" "\$@"
+EOF
+              chmod +x dsnote.sh
+              
+              # Create README
+              cat > README.txt << 'EOF'
+DSNote AArch64 Binary Distribution
+===================================
+
+To run DSNova:
+  ./dsnote.sh
+
+Requirements:
+  - Kylin V10 SP1 or compatible Debian/Ubuntu-based system
+  - Qt5 runtime libraries
+  - Python 3 with required ML packages (for TTS/STT features)
+
+Optional: Install system packages for full functionality:
+  sudo apt install libqt5core5a libqt5gui5 libqt5widgets5 \
+                   libgstreamer1.0-0 libpulse0 libopenblas0
+EOF
+              
+              ls -laR \${DIST_DIR}
+            "
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dsnote-aarch64-binary
+          path: artifacts/dsnote-aarch64
+          retention-days: 7

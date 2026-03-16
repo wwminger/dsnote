@@ -1,0 +1,85 @@
+# Dockerfile for AArch64 build environment for Speech Note (dsnote)
+# Base: cnxc/kylin:desktop-v10sp1 with GCC 9.3.0
+# Build: docker buildx build --platform linux/arm64 -t dsnote-aarch64-kylin-builder .
+FROM cnxc/kylin:desktop-v10sp1
+
+LABEL maintainer="Michal Kosciesza <michal@mkiol.net>"
+LABEL description="AArch64 build environment for Speech Note based on Kylin V10 SP1"
+LABEL org.opencontainers.image.source="https://github.com/wwminger/dsnote"
+
+# Set platform for multi-arch builds
+ARG TARGETPLATFORM=linux/arm64
+
+# Avoid interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update system and install basic tools
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    wget \
+    sudo \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install runtime dependencies (from PKGBUILD depends)
+RUN apt-get update && apt-get install -y \
+    libboost-all-dev \
+    libfmt-dev \
+    libglslang-dev \
+    gstreamer1.0-plugins-good \
+    hicolor-icon-theme \
+    libkf5configwidgets-dev \
+    libkf5dbusaddons-dev \
+    libkf5iconthemes-dev \
+    libkf5kirigami2-dev \
+    libarchive-dev \
+    libpulse-dev \
+    libxinerama-dev \
+    libxtst-dev \
+    ocl-icd-opencl-dev \
+    libopenblas-dev \
+    ffmpeg \
+    python3 \
+    python3-pip \
+    qtbase5-dev \
+    qml-module-qtquick2 \
+    qtmultimedia5-dev \
+    libqt5quickcontrols2-dev \
+    libqt5x11extras5-dev \
+    librubberband-dev \
+    libtag1-dev \
+    libvulkan-dev \
+    libwayland-dev \
+    liblzma-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install build dependencies (from PKGBUILD makedepends)
+RUN apt-get update && apt-get install -y \
+    extra-cmake-modules \
+    meson \
+    patchelf \
+    pybind11-dev \
+    qttools5-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install optional dependencies
+RUN apt-get update && apt-get install -y \
+    ydotool \
+    || true && rm -rf /var/lib/apt/lists/*
+
+
+# Create build user
+RUN useradd -m builduser && \
+    echo "builduser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/builduser && \
+    chmod 0440 /etc/sudoers.d/builduser
+
+# Configure git for builduser
+RUN su - builduser -c "git config --global --add safe.directory /workspace"
+
+# Set working directory
+WORKDIR /workspace
+
+# Default command
+CMD ["/bin/bash"]
