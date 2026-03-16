@@ -22,39 +22,47 @@ RUN apt-get update && apt-get install -y \
     sudo \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
-
-# Install runtime dependencies (from PKGBUILD depends)
 RUN apt-get update && apt-get install -y \
     libboost-all-dev \
     libfmt-dev \
-    libglslang-dev \
     gstreamer1.0-plugins-good \
     hicolor-icon-theme \
     libkf5configwidgets-dev \
     libkf5dbusaddons-dev \
     libkf5iconthemes-dev \
-    libkf5kirigami2-dev \
     libarchive-dev \
     libpulse-dev \
     libxinerama-dev \
     libxtst-dev \
     ocl-icd-opencl-dev \
     libopenblas-dev \
-    ffmpeg \
+    libavcodec-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libswresample-dev \
     python3 \
     python3-pip \
     qtbase5-dev \
     qml-module-qtquick2 \
     qtmultimedia5-dev \
-    libqt5quickcontrols2-dev \
     libqt5x11extras5-dev \
     librubberband-dev \
     libtag1-dev \
     libvulkan-dev \
     libwayland-dev \
     liblzma-dev \
-    ydotool \
     && rm -rf /var/lib/apt/lists/*
+
+# Install packages that may not be available (ignore failures)
+RUN apt-get update && apt-get install -y \
+    libglslang-dev \
+    || echo "Warning: libglslang-dev not available, skipping..."
+RUN apt-get update && apt-get install -y \
+    libkf5kirigami2-dev \
+    || echo "Warning: libkf5kirigami2-dev not available, skipping..."
+RUN apt-get update && apt-get install -y \
+    libqt5quickcontrols2-5 \
+    || echo "Warning: libqt5quickcontrols2-5 not available, skipping..."
 
 # Install build dependencies (from PKGBUILD makedepends)
 RUN apt-get update && apt-get install -y \
@@ -64,6 +72,11 @@ RUN apt-get update && apt-get install -y \
     pybind11-dev \
     qttools5-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Install optional dependencies (ignore failures for unavailable packages)
+RUN apt-get update && apt-get install -y \
+    ydotool \
+    || echo "Warning: ydotool not available, skipping..."
 
 
 # Create build user
