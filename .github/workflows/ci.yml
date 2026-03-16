@@ -113,10 +113,11 @@ jobs:
               cp arch/git/* .
               sed -i 's/CI_BUILD=false/CI_BUILD=true/' PKGBUILD
               sed -i 's/FULL_BUILD=true/FULL_BUILD=false/' PKGBUILD
+              grep "^PACKEXT" /etc/makepkg.conf
               chown -R builduser:builduser .
               sudo -u builduser makepkg --syncdeps --noconfirm
               mkdir -p artifacts
-              cp dsnote-git-*.pkg.tar.zst artifacts/
+              cp dsnote*.pkg.* artifacts/
               ls -la artifacts/
             "
 
@@ -125,7 +126,7 @@ jobs:
         if: always()
         with:
           name: dsnote-x86_64
-          path: artifacts/*.pkg.tar.zst
+          path: artifacts/*.pkg.*
           retention-days: 7
 
   build-aarch64:
@@ -155,12 +156,13 @@ jobs:
               cp arch/git/* .
               sed -i 's/CI_BUILD=false/CI_BUILD=true/' PKGBUILD
               sed -i 's/FULL_BUILD=false/FULL_BUILD=true/' PKGBUILD
+              grep "^PACKEXT" /etc/makepkg.conf
               chown -R builduser:builduser .
               sudo -u builduser makepkg --syncdeps --noconfirm
               pwd 
               ls -la /workspace
               mkdir -p artifacts
-              cp dsnote*.pkg.tar.zst artifacts/
+              cp dsnote*.pkg.* artifacts/
               ls -la artifacts/
             "
 
@@ -169,7 +171,7 @@ jobs:
         if: always()
         with:
           name: dsnote-aarch64
-          path: artifacts/*.pkg.tar.zst
+          path: artifacts/*.pkg.*
           retention-days: 7
 
   release:
@@ -193,7 +195,7 @@ jobs:
       - name: Generate checksums
         run: |
           cd artifacts
-          sha256sum *.pkg.tar.zst > SHA256SUMS.txt
+          sha256sum *.pkg.* > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - name: Create Release
