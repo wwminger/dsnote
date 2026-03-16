@@ -181,32 +181,11 @@ jobs:
               done
               
               # Create startup script
-              cat > dsnote.sh << 'ENDSCRIPT'
-#!/bin/bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export LD_LIBRARY_PATH="${SCRIPT_DIR}/lib:${LD_LIBRARY_PATH}"
-export QT_QPA_PLATFORM=xcb
-exec "${SCRIPT_DIR}/dsnote" "$@"
-ENDSCRIPT
+              printf '%s\n' '#!/bin/bash' 'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' 'export LD_LIBRARY_PATH="${SCRIPT_DIR}/lib:${LD_LIBRARY_PATH}"' 'export QT_QPA_PLATFORM=xcb' 'exec "${SCRIPT_DIR}/dsnote" "$@"' > dsnote.sh
               chmod +x dsnote.sh
 
               # Create README
-              cat > README.txt << 'ENDREADME'
-DSNote AArch64 Binary Distribution
-===================================
-
-To run DSNova:
-  ./dsnote.sh
-
-Requirements:
-  - Kylin V10 SP1 or compatible Debian/Ubuntu-based system
-  - Qt5 runtime libraries
-  - Python 3 with required ML packages (for TTS/STT features)
-
-Optional: Install system packages for full functionality:
-  sudo apt install libqt5core5a libqt5gui5 libqt5widgets5 \
-                   libgstreamer1.0-0 libpulse0 libopenblas0
-ENDREADME
+              printf '%s\n' 'DSNote AArch64 Binary Distribution' '===================================' '' 'To run DSNova:' '  ./dsnote.sh' '' 'Requirements:' '  - Kylin V10 SP1 or compatible Debian/Ubuntu-based system' '  - Qt5 runtime libraries' '  - Python 3 with required ML packages (for TTS/STT features)' '' 'Optional: Install system packages for full functionality:' '  sudo apt install libqt5core5a libqt5gui5 libqt5widgets5 \' '                   libgstreamer1.0-0 libpulse0 libopenblas0' > README.txt
               
               ls -laR \${DIST_DIR}
             "
