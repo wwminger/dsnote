@@ -53,6 +53,7 @@ RUN apt-get update && apt-get install -y \
     libvulkan-dev \
     libwayland-dev \
     liblzma-dev \
+    ydotool \
     && rm -rf /var/lib/apt/lists/*
 
 # Install build dependencies (from PKGBUILD makedepends)
@@ -63,11 +64,6 @@ RUN apt-get update && apt-get install -y \
     pybind11-dev \
     qttools5-dev \
     && rm -rf /var/lib/apt/lists/*
-
-# Install optional dependencies
-RUN apt-get update && apt-get install -y \
-    ydotool \
-    || true && rm -rf /var/lib/apt/lists/*
 
 
 # Create build user
