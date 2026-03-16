@@ -9,7 +9,7 @@ arch=(
   'x86_64'
   'aarch64'
 )
-url="https://github.com/mkiol/dsnote"
+url="https://github.com/wwminger/dsnote"
 license=('MPL2')
 depends=(
   'boost-libs'
@@ -78,7 +78,7 @@ options=('!debug')
 provides=(${_pkgname})
 conflicts=(${_pkgname})
 install=${_pkgname}.install
-source=(git+https://github.com/mkiol/dsnote.git)
+source=(git+https://github.com/wwminger/dsnote.git)
 sha256sums=('SKIP')
 
 pkgver() {
